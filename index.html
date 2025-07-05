@@ -15,7 +15,8 @@
     const world = new Globe(document.getElementById('globeViz'))
       .backgroundColor('rgba(0,0,0,0)')
       .showGlobe(false)
-      .showAtmosphere(false);
+      .showAtmosphere(false)
+      .pointOfView({ lat: 51, lng: 10, altitude: 1.5 }, 0);
 
     fetch('//cdn.jsdelivr.net/npm/world-atlas/land-110m.json').then(res => res.json())
       .then(landTopo => {
