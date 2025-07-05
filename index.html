@@ -1,29 +1,82 @@
-<head>
-  <style> body { margin: 0; } </style>
+<script type="module">
+  import Globe from 'https://esm.sh/globe.gl';
+  import * as THREE from 'https://esm.sh/three';
+  import * as topojson from 'https://esm.sh/topojson-client';
 
-  <script src="//cdn.jsdelivr.net/npm/globe.gl"></script>
-<!--  <script src="../../dist/globe.gl.js"></script>-->
-</head>
+  const world = new Globe(document.getElementById('globeViz'))
+    .backgroundColor('rgba(0,0,0,0)')
+    .showGlobe(true)
+    .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-dark.jpg')
+    .showAtmosphere(false)
+    .pointOfView({ lat: 51, lng: 10, altitude: 1.5 }, 0); // Startposition Deutschland
 
-<body>
-  <div id="globeViz"></div>
+  // Hilfsfunktion: Mittelpunkt eines Polygons berechnen
+  function getPolygonCenter(polygon) {
+    const coords = polygon.geometry.coordinates[0];
+    let lngSum = 0, latSum = 0;
+    coords.forEach(([lng, lat]) => {
+      lngSum += lng;
+      latSum += lat;
+    });
+    const len = coords.length;
+    return { LAT: latSum / len, LNG: lngSum / len };
+  }
 
-  <script type="module">
-    import { MeshLambertMaterial, DoubleSide } from 'https://esm.sh/three';
-    import * as topojson from 'https://esm.sh/topojson-client';
+  // Landdaten laden
+  fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/land-110m.json')
+    .then(res => res.json())
+    .then(landTopo => {
+      const landPolygons = topojson.feature(landTopo, landTopo.objects.land).features;
 
-    const world = new Globe(document.getElementById('globeViz'))
-      .backgroundColor('rgba(0,0,0,0)')
-      .showGlobe(false)
-      .showAtmosphere(false)
-      .pointOfView({ lat: 51, lng: 10, altitude: 1.5 }, 0);
-
-    fetch('//cdn.jsdelivr.net/npm/world-atlas/land-110m.json').then(res => res.json())
-      .then(landTopo => {
-        world
-          .polygonsData(topojson.feature(landTopo, landTopo.objects.land).features)
-          .polygonCapMaterial(new MeshLambertMaterial({ color: 'darkslategrey', side: DoubleSide }))
-          .polygonSideColor(() => 'rgba(0,0,0,0)');
+      // Punktewolken erzeugen
+      const pointMeshes = [];
+      landPolygons.forEach(polygon => {
+        const coords = polygon.geometry.coordinates;
+        coords.forEach(region => {
+          region.forEach(ring => {
+            ring.forEach(([lng, lat]) => {
+              const point = new THREE.Mesh(
+                new THREE.SphereGeometry(0.07, 6, 6),
+                new THREE.MeshBasicMaterial({ color: '#00ffff', transparent: true, opacity: 0.6 })
+              );
+              const { x, y, z } = Globe().getCoords(lat, lng, 100);
+              point.position.set(x, y, z);
+              pointMeshes.push(point);
+            });
+          });
+        });
       });
-  </script>
-</body>
+      world.scene().add(...pointMeshes);
+
+      // Länderumrisse zeichnen
+      const lineMaterial = new THREE.LineBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.3 });
+      landPolygons.forEach(polygon => {
+        const coords = polygon.geometry.coordinates;
+        coords.forEach(region => {
+          region.forEach(ring => {
+            const points = ring.map(([lng, lat]) => {
+              const { x, y, z } = Globe().getCoords(lat, lng, 100.1);
+              return new THREE.Vector3(x, y, z);
+            });
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            const line = new THREE.LineLoop(geometry, lineMaterial);
+            world.scene().add(line);
+          });
+        });
+      });
+
+      // Hover-Fokus auf Land
+      world
+        .polygonsData(landPolygons)
+        .polygonAltitude(0.01)
+        .polygonSideColor(() => 'rgba(0,0,0,0)')
+        .polygonCapColor(() => 'rgba(0,0,0,0)')
+        .onPolygonHover(polygon => {
+          if (polygon) {
+            const { LAT, LNG } = getPolygonCenter(polygon);
+            world.pointOfView({ lat: LAT, lng: LNG, altitude: 1.5 }, 2000);
+          }
+        });
+    });
+</script>
+
