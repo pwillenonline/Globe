@@ -1,27 +1,15 @@
 <head>
-  <style>
-    body {
-      margin: 0;
-      overflow: hidden;
-      background: white;
-    }
-    #globeViz {
-      width: 100vw;
-      height: 100vh;
-      position: absolute;
-    }
-  </style>
+  <style> body { margin: 0; } </style>
 
-  <!-- Globe.gl -->
-  <script src="https://cdn.jsdelivr.net/npm/globe.gl"></script>
+  <script src="//cdn.jsdelivr.net/npm/globe.gl"></script>
+<!--  <script src="../../dist/globe.gl.js"></script>-->
 </head>
 
 <body>
   <div id="globeViz"></div>
 
   <script type="module">
-    import * as THREE from 'https://esm.sh/three';
-    import * as d3 from 'https://esm.sh/d3';
+    import { MeshLambertMaterial, DoubleSide } from 'https://esm.sh/three';
     import * as topojson from 'https://esm.sh/topojson-client';
 
     const world = new Globe(document.getElementById('globeViz'))
@@ -29,112 +17,12 @@
       .showGlobe(false)
       .showAtmosphere(false);
 
-    fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json')
-      .then(res => res.json())
-      .then(worldData => {
-        const countries = topojson.feature(worldData, worldData.objects.countries).features;
-
-        // Punktwolken erzeugen
-        const positions = [];
-
-        const projection = d3.geoEquirectangular();
-        const geoPath = d3.geoPath().projection(projection);
-
-        const samplePointsInPolygon = (feature, numPoints = 800) => {
-          const bounds = geoPath.bounds(feature);
-          const xMin = bounds[0][0];
-          const xMax = bounds[1][0];
-          const yMin = bounds[0][1];
-          const yMax = bounds[1][1];
-
-          const points = [];
-          while (points.length < numPoints) {
-            const x = xMin + Math.random() * (xMax - xMin);
-            const y = yMin + Math.random() * (yMax - yMin);
-            const [lng, lat] = projection.invert([x, y]);
-            if (d3.geoContains(feature, [lng, lat])) {
-              points.push([lng, lat]);
-            }
-          }
-          return points;
-        };
-
-        countries.forEach(feature => {
-          const sample = samplePointsInPolygon(feature, 10000);
-          sample.forEach(([lng, lat]) => {
-            const phi = (90 - lat) * Math.PI / 180;
-            const theta = (lng + 180) * Math.PI / 180;
-
-            const radius = 100;
-            const x = radius * Math.sin(phi) * Math.cos(theta);
-            const y = radius * Math.cos(phi);
-            const z = radius * Math.sin(phi) * Math.sin(theta);
-
-            positions.push(x, y, z);
-          });
-        });
-
-        const pointsGeometry = new THREE.BufferGeometry();
-        pointsGeometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-
-        const pointsMaterial = new THREE.PointsMaterial({
-          color: 999999,
-          size: 0.5,
-          transparent: true,
-          opacity: 0.5,
-          depthWrite: false
-        });
-
-        const points = new THREE.Points(pointsGeometry, pointsMaterial);
-        world.scene().add(points);
-
-        // Ländergrenzen zeichnen
-        const lineMaterial = new THREE.LineBasicMaterial({
-          color: 999999,
-          opacity: 0.2,
-          transparent: true,
-          linewidth: 0.1
-        });
-
-        const lineGeometry = new THREE.BufferGeometry();
-
-        const linePositions = [];
-
-        countries.forEach(feature => {
-          const coords = feature.geometry.coordinates;
-
-          const processCoords = arr => {
-            arr.forEach(ring => {
-              for (let i = 0; i < ring.length - 1; i++) {
-                const [lng1, lat1] = ring[i];
-                const [lng2, lat2] = ring[i + 1];
-
-                const toXYZ = (lng, lat) => {
-                  const phi = (90 - lat) * Math.PI / 180;
-                  const theta = (lng + 180) * Math.PI / 180;
-                  const radius = 100;
-                  const x = radius * Math.sin(phi) * Math.cos(theta);
-                  const y = radius * Math.cos(phi);
-                  const z = -radius * Math.sin(phi) * Math.sin(theta);
-                  return [x, y, z];
-                };
-
-                linePositions.push(...toXYZ(lng1, lat1));
-                linePositions.push(...toXYZ(lng2, lat2));
-              }
-            });
-          };
-
-          if (feature.geometry.type === 'Polygon') {
-            processCoords(feature.geometry.coordinates);
-          } else if (feature.geometry.type === 'MultiPolygon') {
-            feature.geometry.coordinates.forEach(polygon => processCoords(polygon));
-          }
-        });
-
-        lineGeometry.setAttribute('position', new THREE.Float32BufferAttribute(linePositions, 3));
-        const lines = new THREE.LineSegments(lineGeometry, lineMaterial);
-        world.scene().add(lines);
+    fetch('//cdn.jsdelivr.net/npm/world-atlas/land-110m.json').then(res => res.json())
+      .then(landTopo => {
+        world
+          .polygonsData(topojson.feature(landTopo, landTopo.objects.land).features)
+          .polygonCapMaterial(new MeshLambertMaterial({ color: 'darkslategrey', side: DoubleSide }))
+          .polygonSideColor(() => 'rgba(0,0,0,0)');
       });
   </script>
 </body>
