@@ -1,93 +1,86 @@
-<!DOCTYPE html>
-<html lang="de">
-  <head>
-    <meta charset="UTF-8" />
-    <title>3D Punkt-Globus</title>
-    <style>
-      body {
-        margin: 0;
-        overflow: hidden;
-        background: transparent;
-      }
-      #globeViz {
-        width: 100vw;
-        height: 100vh;
-        position: absolute;
-      }
-    </style>
-  </head>
-  <body>
-    <div id="globeViz"></div>
+<head>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: black;
+    }
+    #globeViz {
+      width: 100vw;
+      height: 100vh;
+      position: absolute;
+    }
+  </style>
 
-    <!-- Drei wichtige Libs -->
-    <script src="https://unpkg.com/three"></script>
-    <script src="https://unpkg.com/globe.gl"></script>
-    <script src="https://unpkg.com/topojson@3"></script>
+  <!-- Globe.gl -->
+  <script src="https://cdn.jsdelivr.net/npm/globe.gl"></script>
+</head>
 
-    <script>
-      // 🌍 Globe initialisieren
-      const world = Globe()
-        (document.getElementById('globeViz'))
-        .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-dark.jpg')
-        .backgroundColor('rgba(0, 0, 0, 0)')
-        .showAtmosphere(false);
+<body>
+  <div id="globeViz"></div>
 
-      // 🌐 Länder als Punktwolke laden
-      fetch('https://unpkg.com/world-atlas@2.0.2/countries-110m.json')
-        .then(res => res.json())
-        .then(worldData => {
-          const countries = topojson.feature(worldData, worldData.objects.countries).features;
+  <script type="module">
+    import * as THREE from 'https://esm.sh/three';
+    import * as topojson from 'https://esm.sh/topojson-client';
 
-          const pointsGeometry = new THREE.BufferGeometry();
-          const positions = [];
+    const world = new Globe(document.getElementById('globeViz'))
+      .backgroundColor('rgba(0,0,0,0)')
+      .showGlobe(false)
+      .showAtmosphere(false);
 
-          countries.forEach(country => {
-            const coords = country.geometry.coordinates;
+    fetch('https://cdn.jsdelivr.net/npm/world-atlas/land-110m.json')
+      .then(res => res.json())
+      .then(landTopo => {
+        const landFeatures = topojson.feature(landTopo, landTopo.objects.land).features;
 
-            const processCoords = (poly) => {
-              poly.forEach(ring => {
-                ring.forEach(coord => {
-                  const lng = coord[0];
-                  const lat = coord[1];
+        const positions = [];
 
-                  const phi = (90 - lat) * Math.PI / 180;
-                  const theta = (lng + 180) * Math.PI / 180;
+        const processCoords = (poly) => {
+          poly.forEach(ring => {
+            ring.forEach(coord => {
+              const lng = coord[0];
+              const lat = coord[1];
 
-                  const radius = 100;
-                  const x = radius * Math.sin(phi) * Math.cos(theta);
-                  const y = radius * Math.cos(phi);
-                  const z = radius * Math.sin(phi) * Math.sin(theta);
+              const phi = (90 - lat) * Math.PI / 180;
+              const theta = (lng + 180) * Math.PI / 180;
 
-                  positions.push(x, y, z);
-                });
-              });
-            };
+              const radius = 100;
+              const x = radius * Math.sin(phi) * Math.cos(theta);
+              const y = radius * Math.cos(phi);
+              const z = radius * Math.sin(phi) * Math.sin(theta);
 
-            if (country.geometry.type === 'Polygon') {
-              processCoords(country.geometry.coordinates);
-            } else if (country.geometry.type === 'MultiPolygon') {
-              country.geometry.coordinates.forEach(processCoords);
-            }
+              positions.push(x, y, z);
+            });
           });
+        };
 
-          pointsGeometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+        landFeatures.forEach(feature => {
+          const coords = feature.geometry.coordinates;
 
-          const pointsMaterial = new THREE.PointsMaterial({
-            color: 0x00ffff,       // türkisblau
-            size: 0.7,             // Punktgröße
-            transparent: true,
-            opacity: 0.3,          // halb durchsichtig
-            depthWrite: false      // wichtig für Rückseite sichtbar
-          });
+          if (feature.geometry.type === 'Polygon') {
+            processCoords(coords);
+          } else if (feature.geometry.type === 'MultiPolygon') {
+            coords.forEach(processCoords);
+          }
+        });
 
-          const points = new THREE.Points(pointsGeometry, pointsMaterial);
+        // Punktegeometrie
+        const pointsGeometry = new THREE.BufferGeometry();
+        pointsGeometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
 
-          // Punkte zur Globe-Szene hinzufügen
-          const threeScene = world.scene();
-          threeScene.add(points);
-        })
-        .catch(err => console.error('Fehler beim Laden der Länder:', err));
-    </script>
-  </body>
-</html>
+        // Punkte-Material
+        const pointsMaterial = new THREE.PointsMaterial({
+          color: 0x00ffff,       // Türkis
+          size: 0.6,             // Punktgröße
+          transparent: true,
+          opacity: 0.35,
+          depthWrite: false
+        });
 
+        const points = new THREE.Points(pointsGeometry, pointsMaterial);
+
+        // Punkte zur THREE.js Szene hinzufügen
+        world.scene().add(points);
+      });
+  </script>
+</body>
