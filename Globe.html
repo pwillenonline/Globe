@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Modern Globe</title>
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+        background: transparent;
+      }
+      canvas {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <script src="https://unpkg.com/three"></script>
+    <script src="https://unpkg.com/globe.gl"></script>
+    <script>
+      const world = Globe()
+        (document.body)
+        .globeImageUrl('//unpkg.com/three-globe/example/img/earth-dark.jpg')
+        .backgroundColor('rgba(0, 0, 0, 0)') // transparent background
+        .showAtmosphere(true)
+        .atmosphereColor('#3a9cff')
+        .atmosphereAltitude(0.2)
+        .autoRotate(true)
+        .autoRotateSpeed(0.3)
+        .pointOfView({ lat: 51.1657, lng: 10.4515, altitude: 1.5 }, 3000); // Germany
+
+      // Optional: Landgrenzen hinzufügen
+      fetch('https://unpkg.com/world-atlas/countries-110m.json')
+        .then(res => res.json())
+        .then(countries => {
+          const worldData = window.topojson.feature(countries, countries.objects.countries).features;
+          world.polygonsData(worldData)
+               .polygonCapColor(() => 'rgba(255, 255, 255, 0.1)')
+               .polygonSideColor(() => 'rgba(255, 255, 255, 0.05)')
+               .polygonStrokeColor(() => '#444')
+               .polygonLabel(({ properties: d }) => `${d.name}`);
+        });
+    </script>
+    <script src="https://unpkg.com/topojson@3"></script>
+  </body>
+</html>
