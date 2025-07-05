@@ -60,7 +60,7 @@
         };
 
         countries.forEach(feature => {
-          const sample = samplePointsInPolygon(feature, 15000);
+          const sample = samplePointsInPolygon(feature, 10000);
           sample.forEach(([lng, lat]) => {
             const phi = (90 - lat) * Math.PI / 180;
             const theta = (lng + 180) * Math.PI / 180;
@@ -91,9 +91,9 @@
         // Ländergrenzen zeichnen
         const lineMaterial = new THREE.LineBasicMaterial({
           color: 999999,
-          opacity: 0.5,
+          opacity: 0.2,
           transparent: true,
-          linewidth: 0.2
+          linewidth: 0.1
         });
 
         const lineGeometry = new THREE.BufferGeometry();
@@ -115,7 +115,7 @@
                   const radius = 100;
                   const x = radius * Math.sin(phi) * Math.cos(theta);
                   const y = radius * Math.cos(phi);
-                  const z = radius * Math.sin(phi) * Math.sin(theta);
+                  const z = -radius * Math.sin(phi) * Math.sin(theta);
                   return [x, y, z];
                 };
 
