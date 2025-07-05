@@ -27,12 +27,12 @@
       });
     // Nachricht vom Hauptfenster empfangen
   window.addEventListener('message', (event) => {
-  if (!event.data || !event.data.type) return;
-
-  if (event.data.type === 'focusCountry') {
-    const { lat, lng } = event.data;
-
-    world.pointOfView({ lat, lng, altitude: 1.5 }, 2000);
+  if (event.data?.type === 'focusCountry') {
+    world.pointOfView({
+      lat: event.data.lat,
+      lng: event.data.lng,
+      altitude: 1.5
+    }, 1500);
   }
 });
 
