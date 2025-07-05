@@ -59,7 +59,7 @@
         };
 
         landFeatures.forEach(feature => {
-          const sample = samplePointsInPolygon(feature, 10000); // Anzahl Punkte pro Land
+          const sample = samplePointsInPolygon(feature, 15000); // Anzahl Punkte pro Land
           sample.forEach(([lng, lat]) => {
             const phi = (90 - lat) * Math.PI / 180;
             const theta = (lng + 180) * Math.PI / 180;
@@ -78,7 +78,7 @@
 
         const pointsMaterial = new THREE.PointsMaterial({
           color: 999999,
-          size: 1.5,
+          size: 0.5,
           transparent: true,
           opacity: 0.5,
           depthWrite: false
