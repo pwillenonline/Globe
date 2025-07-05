@@ -1,26 +1,15 @@
 <head>
-  <style>
-    body {
-      margin: 0;
-      overflow: hidden;
-      background: black;
-    }
-    #globeViz {
-      width: 100vw;
-      height: 100vh;
-      position: absolute;
-    }
-  </style>
+  <style> body { margin: 0; } </style>
 
-  <!-- Globe.gl -->
-  <script src="https://cdn.jsdelivr.net/npm/globe.gl"></script>
+  <script src="//cdn.jsdelivr.net/npm/globe.gl"></script>
+<!--  <script src="../../dist/globe.gl.js"></script>-->
 </head>
 
 <body>
   <div id="globeViz"></div>
 
   <script type="module">
-    import * as THREE from 'https://esm.sh/three';
+    import { MeshLambertMaterial, DoubleSide } from 'https://esm.sh/three';
     import * as topojson from 'https://esm.sh/topojson-client';
 
     const world = new Globe(document.getElementById('globeViz'))
@@ -28,59 +17,12 @@
       .showGlobe(false)
       .showAtmosphere(false);
 
-    fetch('https://cdn.jsdelivr.net/npm/world-atlas/land-110m.json')
-      .then(res => res.json())
+    fetch('//cdn.jsdelivr.net/npm/world-atlas/land-110m.json').then(res => res.json())
       .then(landTopo => {
-        const landFeatures = topojson.feature(landTopo, landTopo.objects.land).features;
-
-        const positions = [];
-
-        const processCoords = (poly) => {
-          poly.forEach(ring => {
-            ring.forEach(coord => {
-              const lng = coord[0];
-              const lat = coord[1];
-
-              const phi = (90 - lat) * Math.PI / 180;
-              const theta = (lng + 180) * Math.PI / 180;
-
-              const radius = 100;
-              const x = radius * Math.sin(phi) * Math.cos(theta);
-              const y = radius * Math.cos(phi);
-              const z = radius * Math.sin(phi) * Math.sin(theta);
-
-              positions.push(x, y, z);
-            });
-          });
-        };
-
-        landFeatures.forEach(feature => {
-          const coords = feature.geometry.coordinates;
-
-          if (feature.geometry.type === 'Polygon') {
-            processCoords(coords);
-          } else if (feature.geometry.type === 'MultiPolygon') {
-            coords.forEach(processCoords);
-          }
-        });
-
-        // Punktegeometrie
-        const pointsGeometry = new THREE.BufferGeometry();
-        pointsGeometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-
-        // Punkte-Material
-        const pointsMaterial = new THREE.PointsMaterial({
-          color: 0x00ffff,       // Türkis
-          size: 0.6,             // Punktgröße
-          transparent: true,
-          opacity: 0.35,
-          depthWrite: false
-        });
-
-        const points = new THREE.Points(pointsGeometry, pointsMaterial);
-
-        // Punkte zur THREE.js Szene hinzufügen
-        world.scene().add(points);
+        world
+          .polygonsData(topojson.feature(landTopo, landTopo.objects.land).features)
+          .polygonCapMaterial(new MeshLambertMaterial({ color: 'darkslategrey', side: DoubleSide }))
+          .polygonSideColor(() => 'rgba(0,0,0,0)');
       });
   </script>
 </body>
