@@ -25,6 +25,17 @@
           .polygonCapMaterial(new MeshLambertMaterial({ color: 'darkslategrey', side: DoubleSide }))
           .polygonSideColor(() => 'rgba(0,0,0,0)');
       });
+    // Nachricht vom Hauptfenster empfangen
+  window.addEventListener('message', (event) => {
+  if (!event.data || !event.data.type) return;
+
+  if (event.data.type === 'focusCountry') {
+    const { lat, lng } = event.data;
+
+    world.pointOfView({ lat, lng, altitude: 1.5 }, 2000);
+  }
+});
+
   </script>
 </body>
 
